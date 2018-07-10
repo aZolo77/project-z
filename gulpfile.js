@@ -15,7 +15,7 @@ gulp.task('scss', () => {
 // скрипты
 gulp.task('scripts', () => {
   return gulp
-    .src(['dev/lib/jquery.min.js', 'dev/js/scripts.js'])
+    .src(['dev/lib/jquery.min.js', 'dev/js/scripts.js', 'dev/js/tts.js'])
     .pipe(concat('scripts.js'))
     .pipe(gulp.dest('public/js'));
 });

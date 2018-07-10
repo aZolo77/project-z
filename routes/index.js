@@ -1,2 +1,5 @@
-var route = 1;
-console.log(route);
+const tts = require('./tts/tts.js');
+
+module.exports = {
+  tts: tts
+};
