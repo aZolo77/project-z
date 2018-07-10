@@ -10,9 +10,17 @@ $(function() {
 
 // === Синтезатор речи ===
 $(function() {
+  // == объект User
+  const user = {
+    name: 'Незнакомец',
+    setName: function(val) {
+      this.name = val;
+    }
+  };
+
   // == создаём новый объект для синтеза речи
   const zSyn = window.speechSynthesis;
-  console.dir(zSyn);
+  console.log(zSyn);
 
   // == инициализируем html-объекты
   var inputForm = document.querySelector('form');
@@ -26,7 +34,7 @@ $(function() {
   function listVoices() {
     awaitVoices.then(() => {
       voices = zSyn.getVoices();
-      console.dir(voices);
+      // console.dir(voices);
 
       // == добавляем опции для выбора языка в DOM
       for (let i = 0; i < voices.length; i++) {
@@ -163,23 +171,95 @@ $(function() {
       }
     };
 
+    // устанавливаем имя для хомячка
+    if (nameHandlerInfo.name) {
+      user.setName(nameHandlerInfo.name);
+    }
+
     // воспроизводим приветстие хомячка
     let utterThis = new SpeechSynthesisUtterance(nameHandlerInfo.greeting());
     utterThis.voice = voices[15];
     // zSyn.speaking == true
+    // === отслеживаем объект
     zSyn.speak(utterThis);
-    kalistoIntro();
+    // предложение сыграть в города
+    kalistoIntro()
+      .then(function() {
+        let utterThis = new SpeechSynthesisUtterance('Давайте сыграем в игру');
+        utterThis.voice = voices[15];
+        zSyn.speak(utterThis);
+      })
+      .then(function(res) {
+        showConfirmDialog();
+      })
+      .catch(function(err) {
+        console.log(err);
+      });
     // снимаем обработчик с кнопки
     document.getElementById('catchInfo').removeEventListener('click', sayHi);
   }
 
   // Каллисто представляется
   function kalistoIntro() {
-    let utterThis = new SpeechSynthesisUtterance('Меня зовут Каллисто');
+    let utterThis = new SpeechSynthesisUtterance('Меня зовут Каллисто.');
     utterThis.voice = voices[15];
     zSyn.speak(utterThis);
 
     // == очистить элемент
+    clearElement($('.dialog_holder'));
+    let promiseQuestion = new Promise(function(res, rej) {
+      setTimeout(function() {
+        res();
+      }, 4000);
+    });
+    return promiseQuestion;
+  }
+
+  // == показать диалог для получения согласия
+  function showConfirmDialog() {
+    let holder = $('.dialog_holder');
+    let content = `<div class="agreement_box text-center">
+                      <button class="btn btn-success positive_answer btn-lg mr-3">Yes</button>
+                      <button class="btn btn-secondary negative_answer btn-lg">No</button>
+                  </div>`;
+    holder.html(content);
+    // = Get Default Height
+    let curHeight = holder.height(),
+      // = Get Auto Height
+      autoHeight = holder.css('height', 'auto').height();
+    // = Reset to Default Height
+    holder.height(curHeight);
+    holder.stop().animate(
+      {
+        opacity: 1,
+        height: autoHeight + 30
+      },
+      500
+    );
+    holder.css('box-shadow', '0 0 5px #eaeaea');
+
+    document
+      .querySelector('.agreement_box')
+      .addEventListener('click', getAgreement);
+  }
+
+  // получить согласие на игру
+  function getAgreement(event) {
+    let btn = $(event.target);
+    if (btn.hasClass('positive_answer')) {
+      let utterThis = new SpeechSynthesisUtterance(
+        `Я очень рада ${user.name}. Игра называется "Города́".`
+      );
+      utterThis.voice = voices[15];
+      zSyn.speak(utterThis);
+    }
+    if (btn.hasClass('negative_answer')) {
+      let utterThis = new SpeechSynthesisUtterance(
+        `Мне крайне жаль ${user.name}. До встречи!`
+      );
+      utterThis.voice = voices[15];
+      zSyn.speak(utterThis);
+    }
     clearElement($('.dialog_holder'));
   }
 
