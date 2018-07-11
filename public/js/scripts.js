@@ -52,9 +52,10 @@ $(function() {
     });
   }
 
+  // === инициализируем объект выбора языка
   listVoices();
 
-  // === при изменении настроек звука
+  // === изменение настроек звука
   $('[type="range"]').change(function() {
     let val = $(this).val();
     let id = $(this).attr('id');
@@ -107,7 +108,10 @@ $(function() {
     zSyn.speak(utterThis);
   });
 
-  // == вызов других функций
+  // == начинаем интерактивный диалог
+  $('#dialogBtn').click(talkToMe());
+
+  // == функция для определения имени хомячка единожды
   function talkToMe(obj) {
     let counter = 0;
 
@@ -119,12 +123,41 @@ $(function() {
     };
   }
 
+  // == анимация для раскрытия диалогового блока
+  function showDialogBlock(dialog) {
+    // = Get Default Height
+    let curHeight = dialog.height(),
+      // = Get Auto Height
+      autoHeight = dialog.css('height', 'auto').height();
+    // = Reset to Default Height
+    dialog.height(curHeight);
+    dialog.stop().animate(
+      {
+        height: autoHeight + 30,
+        opacity: 1
+      },
+      500
+    );
+    dialog.css('box-shadow', '0 0 5px #eaeaea');
+  }
+
+  // == анимация при удаление элементов из диалогового блока
   function clearElement(el) {
     $(el).animate({ opacity: 0, height: 0 }, 1000, function() {
       $(this)
         .html('')
         .css('box-shadow', 'none');
     });
+  }
+
+  // == воспроизведение любой фразы
+  function ttsOut(obj) {
+    console.dir(obj);
+    for (let i in obj) {
+      let utterThis = new SpeechSynthesisUtterance(obj[i]);
+      utterThis.voice = voices[15];
+      zSyn.speak(utterThis);
+    }
   }
 
   // == получаем имя пользователя
@@ -140,20 +173,10 @@ $(function() {
       </div>`
     );
 
-    // = Get Default Height
-    let curHeight = dialogHolder.height(),
-      // = Get Auto Height
-      autoHeight = dialogHolder.css('height', 'auto').height();
-    // = Reset to Default Height
-    dialogHolder.height(curHeight);
-    dialogHolder.stop().animate(
-      {
-        height: autoHeight + 30
-      },
-      500
-    );
-    dialogHolder.css('box-shadow', '0 0 5px #eaeaea');
-    // добавляем обработчик по кнопке
+    // == анимация для раскрытия диалогового блока
+    showDialogBlock(dialogHolder);
+
+    // == добавляем обработчик по кнопке
     document.getElementById('catchInfo').addEventListener('click', sayHi);
   }
 
@@ -171,23 +194,21 @@ $(function() {
       }
     };
 
-    // устанавливаем имя для хомячка
+    // = устанавливаем имя для хомячка
     if (nameHandlerInfo.name) {
       user.setName(nameHandlerInfo.name);
     }
 
-    // воспроизводим приветстие хомячка
-    let utterThis = new SpeechSynthesisUtterance(nameHandlerInfo.greeting());
-    utterThis.voice = voices[15];
-    // zSyn.speaking == true
-    // === отслеживаем объект
-    zSyn.speak(utterThis);
-    // предложение сыграть в города
+    // = воспроизводим приветстие хомячка
+    let phrase = { 1: nameHandlerInfo.greeting() };
+    ttsOut(phrase);
+
+    // = предложение сыграть в города
     kalistoIntro()
       .then(function() {
-        let utterThis = new SpeechSynthesisUtterance('Давайте сыграем в игру');
-        utterThis.voice = voices[15];
-        zSyn.speak(utterThis);
+        // = предложение сыграть
+        let phrase = { 1: 'Давайте сыграем в игру' };
+        ttsOut(phrase);
       })
       .then(function(res) {
         showConfirmDialog();
@@ -195,15 +216,14 @@ $(function() {
       .catch(function(err) {
         console.log(err);
       });
-    // снимаем обработчик с кнопки
+    // = снимаем обработчик с кнопки
     document.getElementById('catchInfo').removeEventListener('click', sayHi);
   }
 
-  // Каллисто представляется
+  // == Каллисто представляется
   function kalistoIntro() {
-    let utterThis = new SpeechSynthesisUtterance('Меня зовут Каллисто.');
-    utterThis.voice = voices[15];
-    zSyn.speak(utterThis);
+    let phrase = { 1: 'Меня зовут Каллисто.' };
+    ttsOut(phrase);
 
     // == очистить элемент
     clearElement($('.dialog_holder'));
@@ -223,46 +243,35 @@ $(function() {
                       <button class="btn btn-secondary negative_answer btn-lg">No</button>
                   </div>`;
     holder.html(content);
-    // = Get Default Height
-    let curHeight = holder.height(),
-      // = Get Auto Height
-      autoHeight = holder.css('height', 'auto').height();
-    // = Reset to Default Height
-    holder.height(curHeight);
-    holder.stop().animate(
-      {
-        opacity: 1,
-        height: autoHeight + 30
-      },
-      500
-    );
-    holder.css('box-shadow', '0 0 5px #eaeaea');
+
+    // == анимация для раскрытия диалогового блока
+    showDialogBlock(holder);
 
     document
       .querySelector('.agreement_box')
       .addEventListener('click', getAgreement);
   }
 
-  // получить согласие на игру
+  // == получить согласие/отказ на игру
   function getAgreement(event) {
     let btn = $(event.target);
     if (btn.hasClass('positive_answer')) {
-      let utterThis = new SpeechSynthesisUtterance(
-        `Я очень рада ${user.name}. Игра называется "Города́".`
-      );
-      utterThis.voice = voices[15];
-      zSyn.speak(utterThis);
+      let phrase = {
+        1: `Я очень рада ${user.name}.`,
+        2: `Игра называется "Города́".`
+      };
+      ttsOut(phrase);
     }
     if (btn.hasClass('negative_answer')) {
-      let utterThis = new SpeechSynthesisUtterance(
-        `Мне крайне жаль ${user.name}. До встречи!`
-      );
-      utterThis.voice = voices[15];
-      zSyn.speak(utterThis);
+      let phrase = {
+        1: `Мне крайне жаль ${user.name}.`,
+        2: `До встречи!`
+      };
+      ttsOut(phrase);
     }
+    document
+      .querySelector('.agreement_box')
+      .removeEventListener('click', getAgreement);
     clearElement($('.dialog_holder'));
   }
-
-  // == начинаем интерактивный диалог
-  $('#dialogBtn').click(talkToMe());
 });
