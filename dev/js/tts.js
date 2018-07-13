@@ -9,7 +9,7 @@ $(function() {
   };
 
   // == создаём новый объект для синтеза речи
-  const zSyn = window.speechSynthesis;
+  let zSyn = window.speechSynthesis;
   console.log(zSyn);
 
   // == инициализируем html-объекты
@@ -99,19 +99,7 @@ $(function() {
   });
 
   // == начинаем интерактивный диалог
-  $('#dialogBtn').click(talkToMe());
-
-  // == функция для определения имени хомячка единожды
-  function talkToMe(obj) {
-    let counter = 0;
-
-    return function() {
-      if (counter === 0) {
-        nameYourself();
-      }
-      counter++;
-    };
-  }
+  document.getElementById('dialogBtn').addEventListener('click', nameYourself);
 
   // == анимация для раскрытия диалогового блока
   function showDialogBlock(dialog) {
@@ -141,17 +129,40 @@ $(function() {
   }
 
   // == воспроизведение любой фразы
-  function ttsOut(obj) {
-    console.dir(obj);
+  function ttsOut(obj, next) {
+    // объект фразы
+    // console.dir(obj);
     for (let i in obj) {
       let utterThis = new SpeechSynthesisUtterance(obj[i]);
       utterThis.voice = voices[15];
       zSyn.speak(utterThis);
     }
+    if (next) {
+      audioEnd().then(function(res) {
+        next.func();
+      });
+    }
+  }
+
+  // завершение audio
+  function audioEnd() {
+    return new Promise(function(res, rej) {
+      (function loops() {
+        setTimeout(function() {
+          if (zSyn.speaking != false) {
+            loops();
+          } else {
+            return res('ok');
+          }
+        }, 250);
+      })();
+    });
   }
 
   // == получаем имя пользователя
   function nameYourself() {
+    // снимаем обработчик с первой кнопки
+    dialogBtn.removeEventListener('click', nameYourself);
     let dialogHolder = $('.dialog_holder');
     dialogHolder.html(
       `<div class="name_holder">
@@ -166,8 +177,8 @@ $(function() {
     // == анимация для раскрытия диалогового блока
     showDialogBlock(dialogHolder);
 
-    // == добавляем обработчик по кнопке
-    document.getElementById('catchInfo').addEventListener('click', sayHi);
+    // == добавляем обработчик по кнопке и снимаем с Initial
+    catchInfo.addEventListener('click', sayHi);
   }
 
   // == приветствуем хомячка
@@ -187,6 +198,7 @@ $(function() {
     // = устанавливаем имя для хомячка
     if (nameHandlerInfo.name) {
       user.setName(nameHandlerInfo.name);
+      gameFuncs.getUserName(nameHandlerInfo.name);
     }
 
     // = воспроизводим приветстие хомячка
@@ -194,20 +206,14 @@ $(function() {
     ttsOut(phrase);
 
     // = предложение сыграть в города
-    kalistoIntro()
-      .then(function() {
-        // = предложение сыграть
-        let phrase = { 1: 'Давайте сыграем в игру' };
-        ttsOut(phrase);
-      })
-      .then(function(res) {
-        showConfirmDialog();
-      })
-      .catch(function(err) {
-        console.log(err);
-      });
+    kalistoIntro().then(function() {
+      // = предложение сыграть
+      let phrase = { 1: 'Давайте сыграем в игру' };
+      ttsOut(phrase, { func: showConfirmDialog });
+    });
+
     // = снимаем обработчик с кнопки
-    document.getElementById('catchInfo').removeEventListener('click', sayHi);
+    catchInfo.removeEventListener('click', sayHi);
   }
 
   // == Каллисто представляется
@@ -217,6 +223,7 @@ $(function() {
 
     // == очистить элемент
     clearElement($('.dialog_holder'));
+
     let promiseQuestion = new Promise(function(res, rej) {
       setTimeout(function() {
         res();
@@ -245,13 +252,15 @@ $(function() {
   // == получить согласие/отказ на игру
   function getAgreement(event) {
     let btn = $(event.target);
+
     if (btn.hasClass('positive_answer')) {
       let phrase = {
         1: `Я очень рада ${user.name}.`,
         2: `Игра называется "Города́".`
       };
-      ttsOut(phrase);
+      ttsOut(phrase, { func: gameFuncs.city.startGame });
     }
+
     if (btn.hasClass('negative_answer')) {
       let phrase = {
         1: `Мне крайне жаль ${user.name}.`,
@@ -259,6 +268,7 @@ $(function() {
       };
       ttsOut(phrase);
     }
+
     document
       .querySelector('.agreement_box')
       .removeEventListener('click', getAgreement);
