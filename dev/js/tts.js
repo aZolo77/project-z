@@ -1,141 +1,19 @@
 // === Синтезатор речи ===
 $(function() {
-  // == объект User
-  const user = {
-    name: 'Незнакомец',
-    setName: function(val) {
-      this.name = val;
-    }
-  };
-
-  // == создаём новый объект для синтеза речи
-  let zSyn = window.speechSynthesis;
-  console.log(zSyn);
-
-  // == инициализируем html-объекты
-  var inputForm = document.querySelector('form');
-  var inputTxt = document.querySelector('.txt');
-  var voiceSelect = document.getElementById('voiceSelector');
-
-  // == ждём загрузки объекта языков
-  const awaitVoices = new Promise(res => (zSyn.onvoiceschanged = res));
-  var voices = [];
-
-  function listVoices() {
-    awaitVoices.then(() => {
-      voices = zSyn.getVoices();
-      // console.dir(voices);
-
-      // == добавляем опции для выбора языка в DOM
-      for (let i = 0; i < voices.length; i++) {
-        let option = document.createElement('option');
-        option.textContent = `${voices[i].name} (${voices[i].lang})`;
-
-        if (voices[i].default) {
-          option.textContent += ' -- DEFAULT';
-        }
-
-        option.setAttribute('data-lang', voices[i].lang);
-        option.setAttribute('data-name', voices[i].name);
-        voiceSelect.appendChild(option);
-      }
-    });
-  }
-
-  // === инициализируем объект выбора языка
-  listVoices();
-
-  // === изменение настроек звука
-  $('[type="range"]').change(function() {
-    let val = $(this).val();
-    let id = $(this).attr('id');
-    $('[for="' + id + '"]')
-      .find('span')
-      .text(val);
-  });
-
-  // == создаём событие на отправку фразы (выбор языка)
-  inputForm.addEventListener('submit', function(evt) {
-    evt.preventDefault();
-
-    // = значения настроек
-    // скорость воспроизведения
-    let rate = $('#rate').val();
-    // высота звука
-    let pitch = $('#pitch').val();
-    // громкость
-    let volume = $('#volume').val();
-
-    // console.log(`rate: ${rate}, pitch:: ${pitch}, volume: ${volume}`);
-
-    // == новый объект фразы
-    let utterThis = new SpeechSynthesisUtterance(inputTxt.value);
-
-    let selectedOption = voiceSelect.selectedOptions[0].getAttribute(
-      'data-name'
-    );
-
-    // console.log(utterThis);
-    for (let i = 0; i < voices.length; i++) {
-      if (voices[i].name === selectedOption) {
-        // == добавляем созданной фразе свойство-обработчик языка
-        utterThis.voice = voices[i];
-      }
-    }
-
-    // = устанавливаем настройки звука
-    utterThis.rate = rate;
-    utterThis.pitch = pitch;
-    utterThis.volume = volume;
-
-    // == проверяем, ввёл ли хомяк текст
-    if (!utterThis.text) {
-      utterThis.text = 'Введите фразу';
-      utterThis.voice = voices[15]; // = русский
-    }
-
-    // == воспроизведение синтезированной из текста фразы
-    zSyn.speak(utterThis);
-  });
-
-  // == начинаем интерактивный диалог
-  document.getElementById('dialogBtn').addEventListener('click', nameYourself);
-
-  // == анимация для раскрытия диалогового блока
-  function showDialogBlock(dialog) {
-    // = Get Default Height
-    let curHeight = dialog.height(),
-      // = Get Auto Height
-      autoHeight = dialog.css('height', 'auto').height();
-    // = Reset to Default Height
-    dialog.height(curHeight);
-    dialog.stop().animate(
-      {
-        height: autoHeight + 30,
-        opacity: 1
-      },
-      500
-    );
-    dialog.css('box-shadow', '0 0 5px #eaeaea');
-  }
-
-  // == анимация при удаление элементов из диалогового блока
-  function clearElement(el) {
-    $(el).animate({ opacity: 0, height: 0 }, 1000, function() {
-      $(this)
-        .html('')
-        .css('box-shadow', 'none');
-    });
-  }
+  // gameFuncs.city.startGame();
+  ttsConfig.testPanel.defineElements();
+  ttsConfig.testPanel.definePhraseSubmition();
+  ttsConfig.testPanel.rangeChange();
+  ttsConfig.tts.listVoices();
+  gameFuncs.city.startGame();
 
   // == воспроизведение любой фразы
   function ttsOut(obj, next) {
     // объект фразы
-    // console.dir(obj);
     for (let i in obj) {
       let utterThis = new SpeechSynthesisUtterance(obj[i]);
-      utterThis.voice = voices[15];
-      zSyn.speak(utterThis);
+      utterThis.voice = ttsConfig.tts.voices[15];
+      ttsConfig.tts.zSyn.speak(utterThis);
     }
     if (next) {
       audioEnd().then(function(res) {
@@ -149,7 +27,7 @@ $(function() {
     return new Promise(function(res, rej) {
       (function loops() {
         setTimeout(function() {
-          if (zSyn.speaking != false) {
+          if (ttsConfig.tts.zSyn.speaking != false) {
             loops();
           } else {
             return res('ok');
@@ -158,6 +36,9 @@ $(function() {
       })();
     });
   }
+
+  // == начинаем интерактивный диалог
+  document.getElementById('dialogBtn').addEventListener('click', nameYourself);
 
   // == получаем имя пользователя
   function nameYourself() {
@@ -175,7 +56,7 @@ $(function() {
     );
 
     // == анимация для раскрытия диалогового блока
-    showDialogBlock(dialogHolder);
+    generalFuncs.showDialogBlock(dialogHolder);
 
     // == добавляем обработчик по кнопке и снимаем с Initial
     catchInfo.addEventListener('click', sayHi);
@@ -197,8 +78,7 @@ $(function() {
 
     // = устанавливаем имя для хомячка
     if (nameHandlerInfo.name) {
-      user.setName(nameHandlerInfo.name);
-      gameFuncs.getUserName(nameHandlerInfo.name);
+      userData.user.setName(nameHandlerInfo.name);
     }
 
     // = воспроизводим приветстие хомячка
@@ -222,7 +102,7 @@ $(function() {
     ttsOut(phrase);
 
     // == очистить элемент
-    clearElement($('.dialog_holder'));
+    generalFuncs.clearElement($('.dialog_holder'));
 
     let promiseQuestion = new Promise(function(res, rej) {
       setTimeout(function() {
@@ -242,7 +122,7 @@ $(function() {
     holder.html(content);
 
     // == анимация для раскрытия диалогового блока
-    showDialogBlock(holder);
+    generalFuncs.showDialogBlock(holder);
 
     document
       .querySelector('.agreement_box')
@@ -255,7 +135,7 @@ $(function() {
 
     if (btn.hasClass('positive_answer')) {
       let phrase = {
-        1: `Я очень рада ${user.name}.`,
+        1: `Я очень рада ${userData.user.name}.`,
         2: `Игра называется "Города́".`
       };
       ttsOut(phrase, { func: gameFuncs.city.startGame });
@@ -263,7 +143,7 @@ $(function() {
 
     if (btn.hasClass('negative_answer')) {
       let phrase = {
-        1: `Мне крайне жаль ${user.name}.`,
+        1: `Мне крайне жаль ${userData.user.name}.`,
         2: `До встречи!`
       };
       ttsOut(phrase);
@@ -272,6 +152,6 @@ $(function() {
     document
       .querySelector('.agreement_box')
       .removeEventListener('click', getAgreement);
-    clearElement($('.dialog_holder'));
+    generalFuncs.clearElement($('.dialog_holder'));
   }
 });

@@ -2,6 +2,18 @@
 * {
   outline: none;
 }
+@mixin transfDF {
+  display: -webkit-flex;
+  display: -moz-flex;
+  display: -ms-flex;
+  display: -o-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  -moz-flex-wrap: wrap;
+  -ms-flex-wrap: wrap;
+  -o-flex-wrap: wrap;
+  flex-wrap: wrap;
+}
 html,
 body {
   margin: 0;
@@ -18,4 +30,37 @@ li {
   padding: 15px;
   overflow: hidden;
   border-radius: 5px;
+}
+.city_player_names {
+  @include transfDF();
+  justify-content: space-between;
+  .player_name {
+    @include transfDF();
+    position: relative;
+    justify-content: space-between;
+    border-radius: 3px;
+    width: 40%;
+    background-color: #555;
+    padding: 10px;
+  }
+  .vs_holder {
+    @include transfDF();
+    align-items: center;
+    padding: 0 7px;
+    box-shadow: 0 0 2px #eee inset;
+    border-radius: 3px;
+  }
+}
+.city_results_table {
+  @include transfDF();
+  justify-content: space-between;
+  .city_holder {
+    @include transfDF();
+    position: relative;
+    justify-content: space-between;
+    border-radius: 3px;
+    width: 40%;
+    background-color: #555;
+    padding: 10px;
+  }
 }
