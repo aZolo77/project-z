@@ -5,7 +5,6 @@ $(function() {
   ttsConfig.testPanel.definePhraseSubmition();
   ttsConfig.testPanel.rangeChange();
   ttsConfig.tts.listVoices();
-  gameFuncs.city.startGame();
 
   // == воспроизведение любой фразы
   function ttsOut(obj, next) {
@@ -138,7 +137,9 @@ $(function() {
         1: `Я очень рада ${userData.user.name}.`,
         2: `Игра называется "Города́".`
       };
-      ttsOut(phrase, { func: gameFuncs.city.startGame });
+      ttsOut(phrase);
+      // ttsOut(phrase, { func: gameFuncs.city.startGame });
+      gameFuncs.city.startGame();
     }
 
     if (btn.hasClass('negative_answer')) {
@@ -149,9 +150,7 @@ $(function() {
       ttsOut(phrase);
     }
 
-    document
-      .querySelector('.agreement_box')
-      .removeEventListener('click', getAgreement);
+    document.querySelector('.agreement_box');
     generalFuncs.clearElement($('.dialog_holder'));
   }
 });
