@@ -62,7 +62,7 @@ const gameFuncs = (function() {
       this.kScoreHolder = $('.k_score_holder');
       this.userScoreHolder = $('.user_score_holder');
       // определяем имя игрока
-      self.getPlayerName();
+      this.getPlayerName();
       $('#pName').html(this.playerName);
       // == поместить массив с городами в localStorage или забрать оттуда (если уже есть) и присвоить объекту городов
       if (localStorage.getItem('cities') !== null) {

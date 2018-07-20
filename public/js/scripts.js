@@ -56,6 +56,7 @@ const userData = (function() {
   return { user };
 })();
 
+// === Синтезатор речи [Настройки] + Тестовая панель ===
 const ttsConfig = (function() {
   const awaitVoices = new Promise(
     res => (window.speechSynthesis.onvoiceschanged = res)
@@ -126,13 +127,58 @@ const ttsConfig = (function() {
   const tts = {
     zSyn: window.speechSynthesis,
     voices: [],
+    // == завершение audio
+    audioEnd: function() {
+      let self = this;
+      return new Promise(function(res, rej) {
+        (function loops() {
+          setTimeout(function() {
+            if (self.zSyn.speaking != false) {
+              loops();
+            } else {
+              return res('ok');
+            }
+          }, 250);
+        })();
+      });
+    },
+    // == произнести новую фразу
+    speak: function(obj) {
+      let utterThis = new SpeechSynthesisUtterance(obj);
+      console.log(utterThis);
+      utterThis.lang = 'ru-RU';
+      this.zSyn.speak(utterThis);
+    },
+    // == воспроизведение любой фразы
+    ttsOut: function(obj, next) {
+      // = объект фразы
+      for (let i in obj) {
+        this.speak(obj[i]);
+      }
+      // = если передана функция - выполняем её после аудиовоспроизведения
+      if (next) {
+        this.audioEnd().then(function(res) {
+          // == если передаётся свойство "Начать игру", привязываем объект соответствующей игры
+          if (next.game) {
+            let gameStart = next.func.bind(gameFuncs.city);
+            gameStart();
+          } else {
+            next.func();
+          }
+        });
+      }
+    },
+    // == загрузить список языков
     awaitVoices: function() {
-      return new Promise(res => (tts.zSyn.onvoiceschanged = res));
+      let self = this;
+      return new Promise(res => (self.zSyn.onvoiceschanged = res));
     },
     // == ждём загрузки объекта языков
     listVoices: function() {
+      let self = this;
       awaitVoices.then(function(data) {
         voices = tts.zSyn.getVoices();
+        self.voices = voices;
         testPanel.voices = voices;
 
         // == добавляем опции для выбора языка в DOM
@@ -219,7 +265,7 @@ const gameFuncs = (function() {
       this.kScoreHolder = $('.k_score_holder');
       this.userScoreHolder = $('.user_score_holder');
       // определяем имя игрока
-      self.getPlayerName();
+      this.getPlayerName();
       $('#pName').html(this.playerName);
       // == поместить массив с городами в localStorage или забрать оттуда (если уже есть) и присвоить объекту городов
       if (localStorage.getItem('cities') !== null) {
@@ -358,159 +404,150 @@ const gameFuncs = (function() {
   return { city };
 })();
 
-// === Синтезатор речи ===
+// === [Точка входа] + [диалог с Kallisto] ===
+// == ждёт загрузки страницы
 $(function() {
-  // gameFuncs.city.startGame();
+  const KallistoDialog = {
+    name: 'Kallisto',
+    // == html-объекты
+    treeObjs: {},
+    // == установить html-объекты
+    getTree: function() {
+      let dialogHolder = $('.dialog_holder');
+      this.treeObjs.dialogHolder = dialogHolder;
+      let dialogStartBtn = document.getElementById('dialogBtn');
+      this.treeObjs.dialogStartBtn = dialogStartBtn;
+    },
+    // == привязка событий к html-объектам
+    bindEvents: function() {
+      let self = this;
+      // = начинает интерактивный диалог
+      this.treeObjs.dialogStartBtn.addEventListener(
+        'click',
+        self.nameYourself.bind(self)
+      );
+    },
+    // == получить имя гостя
+    nameYourself: function() {
+      let self = this;
+      // снимаем обработчик с основной кнопки
+      this.treeObjs.dialogStartBtn.removeEventListener(
+        'click',
+        self.nameYourself
+      );
+      this.treeObjs.dialogHolder.html(
+        `<div class="name_holder">
+        <div class="dialog_heading text-center mb-2">Введите Ваше имя и нажмите "Подтвердить"</div>
+          <input type="text" class="form-control text-center" id="userName">
+          <center class="mt-3">
+            <button class="btn btn-success" id="catchInfo">Подтвердить</button>
+          </center>
+        </div>`
+      );
+
+      // == анимация для раскрытия диалогового блока
+      generalFuncs.showDialogBlock(this.treeObjs.dialogHolder);
+
+      // == добавляем обработчик по кнопке и снимаем с Initial
+      document
+        .getElementById('catchInfo')
+        .addEventListener('click', self.sayHi.bind(self));
+    },
+    // == приветствие гостя
+    sayHi: function() {
+      let self = this;
+      // = объект для приветствия
+      let nameHandlerInfo = {
+        name: $('#userName').val(),
+        greeting: function() {
+          if (this.name) {
+            return `Приятно познакомиться, ${this.name}`;
+          } else {
+            return `Привет незнакомец`;
+          }
+        }
+      };
+
+      // = устанавливаем имя для гостя
+      if (nameHandlerInfo.name) {
+        userData.user.setName(nameHandlerInfo.name);
+      }
+
+      // = воспроизводим приветстие гостя
+      let phrase = { 1: nameHandlerInfo.greeting() };
+      ttsConfig.tts.ttsOut(phrase);
+
+      // = предложение сыграть в города
+      this.kalistoIntro();
+
+      // = снимаем обработчик с кнопки
+      catchInfo.removeEventListener('click', self.sayHi);
+    },
+    // == Каллисто представляется
+    kalistoIntro: function() {
+      let self = this;
+      // == очистить диалоговое окно
+      generalFuncs.clearElement(self.treeObjs.dialogHolder);
+      // = предложение сыграть
+      let phrase = {
+        1: `Меня зовут ${this.name}`,
+        2: 'Давайте сыграем в игру'
+      };
+      ttsConfig.tts.ttsOut(phrase, { func: self.showConfirmDialog.bind(self) });
+    },
+    // == показать диалог для получения согласия
+    showConfirmDialog: function() {
+      let self = this;
+      let content = `<div class="agreement_box text-center">
+                        <button class="btn btn-success positive_answer btn-lg mr-3">Yes</button>
+                        <button class="btn btn-secondary negative_answer btn-lg">No</button>
+                    </div>`;
+      this.treeObjs.dialogHolder.html(content);
+
+      // == анимация для раскрытия диалогового блока
+      generalFuncs.showDialogBlock(this.treeObjs.dialogHolder);
+
+      document
+        .querySelector('.agreement_box')
+        .addEventListener('click', self.getAgreement.bind(self));
+    },
+    // == получить согласие/отказ играть
+    getAgreement: function(event) {
+      let btn = $(event.target);
+
+      if (btn.hasClass('positive_answer')) {
+        let phrase = {
+          1: `Я очень рада ${userData.user.name}.`,
+          2: `Игра называется "Города́".`
+        };
+        ttsConfig.tts.ttsOut(phrase, {
+          func: gameFuncs.city.startGame,
+          game: true
+        });
+      }
+
+      if (btn.hasClass('negative_answer')) {
+        let phrase = {
+          1: `Мне крайне жаль ${userData.user.name}.`,
+          2: `До встречи!`
+        };
+        ttsConfig.tts.ttsOut(phrase);
+      }
+
+      generalFuncs.clearElement($('.dialog_holder'));
+    }
+  };
+
+  // == установка html-объектов
+  KallistoDialog.getTree();
+  // == привязка начального события
+  KallistoDialog.bindEvents();
+
+  // gameFuncs.city.startGame(); // [чтобы сразу начать игру "Cities"]
   ttsConfig.testPanel.defineElements();
   ttsConfig.testPanel.definePhraseSubmition();
   ttsConfig.testPanel.rangeChange();
+  // = так можно достать массив языков: [window.speechSynthesis.getVoices()]
   ttsConfig.tts.listVoices();
-
-  // == воспроизведение любой фразы
-  function ttsOut(obj, next) {
-    // объект фразы
-    for (let i in obj) {
-      let utterThis = new SpeechSynthesisUtterance(obj[i]);
-      utterThis.voice = ttsConfig.tts.voices[15];
-      ttsConfig.tts.zSyn.speak(utterThis);
-    }
-    if (next) {
-      audioEnd().then(function(res) {
-        next.func();
-      });
-    }
-  }
-
-  // завершение audio
-  function audioEnd() {
-    return new Promise(function(res, rej) {
-      (function loops() {
-        setTimeout(function() {
-          if (ttsConfig.tts.zSyn.speaking != false) {
-            loops();
-          } else {
-            return res('ok');
-          }
-        }, 250);
-      })();
-    });
-  }
-
-  // == начинаем интерактивный диалог
-  document.getElementById('dialogBtn').addEventListener('click', nameYourself);
-
-  // == получаем имя пользователя
-  function nameYourself() {
-    // снимаем обработчик с первой кнопки
-    dialogBtn.removeEventListener('click', nameYourself);
-    let dialogHolder = $('.dialog_holder');
-    dialogHolder.html(
-      `<div class="name_holder">
-      <div class="dialog_heading text-center mb-2">Введите Ваше имя и нажмите "Подтвердить"</div>
-        <input type="text" class="form-control text-center" id="userName">
-        <center class="mt-3">
-          <button class="btn btn-success" id="catchInfo">Подтвердить</button>
-        </center>
-      </div>`
-    );
-
-    // == анимация для раскрытия диалогового блока
-    generalFuncs.showDialogBlock(dialogHolder);
-
-    // == добавляем обработчик по кнопке и снимаем с Initial
-    catchInfo.addEventListener('click', sayHi);
-  }
-
-  // == приветствуем хомячка
-  function sayHi() {
-    // = объект для приветствия
-    let nameHandlerInfo = {
-      name: $('#userName').val(),
-      greeting: function() {
-        if (this.name) {
-          return `Приятно познакомиться, ${this.name}`;
-        } else {
-          return `Привет незнакомец`;
-        }
-      }
-    };
-
-    // = устанавливаем имя для хомячка
-    if (nameHandlerInfo.name) {
-      userData.user.setName(nameHandlerInfo.name);
-    }
-
-    // = воспроизводим приветстие хомячка
-    let phrase = { 1: nameHandlerInfo.greeting() };
-    ttsOut(phrase);
-
-    // = предложение сыграть в города
-    kalistoIntro().then(function() {
-      // = предложение сыграть
-      let phrase = { 1: 'Давайте сыграем в игру' };
-      ttsOut(phrase, { func: showConfirmDialog });
-    });
-
-    // = снимаем обработчик с кнопки
-    catchInfo.removeEventListener('click', sayHi);
-  }
-
-  // == Каллисто представляется
-  function kalistoIntro() {
-    let phrase = { 1: 'Меня зовут Каллисто.' };
-    ttsOut(phrase);
-
-    // == очистить элемент
-    generalFuncs.clearElement($('.dialog_holder'));
-
-    let promiseQuestion = new Promise(function(res, rej) {
-      setTimeout(function() {
-        res();
-      }, 4000);
-    });
-    return promiseQuestion;
-  }
-
-  // == показать диалог для получения согласия
-  function showConfirmDialog() {
-    let holder = $('.dialog_holder');
-    let content = `<div class="agreement_box text-center">
-                      <button class="btn btn-success positive_answer btn-lg mr-3">Yes</button>
-                      <button class="btn btn-secondary negative_answer btn-lg">No</button>
-                  </div>`;
-    holder.html(content);
-
-    // == анимация для раскрытия диалогового блока
-    generalFuncs.showDialogBlock(holder);
-
-    document
-      .querySelector('.agreement_box')
-      .addEventListener('click', getAgreement);
-  }
-
-  // == получить согласие/отказ на игру
-  function getAgreement(event) {
-    let btn = $(event.target);
-
-    if (btn.hasClass('positive_answer')) {
-      let phrase = {
-        1: `Я очень рада ${userData.user.name}.`,
-        2: `Игра называется "Города́".`
-      };
-      ttsOut(phrase);
-      // ttsOut(phrase, { func: gameFuncs.city.startGame });
-      gameFuncs.city.startGame();
-    }
-
-    if (btn.hasClass('negative_answer')) {
-      let phrase = {
-        1: `Мне крайне жаль ${userData.user.name}.`,
-        2: `До встречи!`
-      };
-      ttsOut(phrase);
-    }
-
-    document.querySelector('.agreement_box');
-    generalFuncs.clearElement($('.dialog_holder'));
-  }
+  console.log(KallistoDialog);
 });

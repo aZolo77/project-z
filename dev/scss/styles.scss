@@ -1,7 +1,27 @@
 @import 'node_modules/bootstrap/scss/bootstrap';
-* {
-  outline: none;
+
+// = {переменные}
+$small: 320px;
+$medium: 768px;
+$large: 1024px;
+
+// = миксин для {queries}
+@mixin respond-to($media) {
+  @if $media == small-screens {
+    @media only screen and (max-width: $small) {
+      @content;
+    }
+  } @else if $media == medium-screens {
+    @media only screen and (min-width: $small + 1) and (max-width: $medium - 1) {
+      @content;
+    }
+  } @else if $media == wide-screens {
+    @media only screen and (min-width: $large) {
+      @content;
+    }
+  }
 }
+// = миксин для {display: flex}
 @mixin transfDF {
   display: -webkit-flex;
   display: -moz-flex;
@@ -13,6 +33,10 @@
   -ms-flex-wrap: wrap;
   -o-flex-wrap: wrap;
   flex-wrap: wrap;
+}
+// === {Styles} ===
+* {
+  outline: none;
 }
 html,
 body {
@@ -34,6 +58,9 @@ li {
 .city_player_names {
   @include transfDF();
   justify-content: space-between;
+  @include respond-to(medium-screens) {
+    justify-content: center;
+  }
   .player_name {
     @include transfDF();
     position: relative;
@@ -41,14 +68,33 @@ li {
     border-radius: 3px;
     width: 40%;
     background-color: #555;
-    padding: 10px;
+    @include respond-to(medium-screens) {
+      width: 100%;
+    }
+    .k_name,
+    .p_name,
+    .count {
+      padding: 5px 10px;
+    }
+    .count {
+      background-color: #e9b10b;
+      box-shadow: 0 0 4px #fff inset;
+      border-top-right-radius: 3px;
+      border-bottom-right-radius: 3px;
+    }
   }
   .vs_holder {
     @include transfDF();
     align-items: center;
-    padding: 0 7px;
+    padding: 0 40px;
     box-shadow: 0 0 2px #eee inset;
     border-radius: 3px;
+    @include respond-to(medium-screens) {
+      width: 100%;
+      justify-content: center;
+      padding: 5px 0;
+      margin: 10px 0;
+    }
   }
 }
 .city_results_table {
@@ -62,5 +108,8 @@ li {
     width: 40%;
     background-color: #555;
     padding: 10px;
+    @include respond-to(medium-screens) {
+      width: 100%;
+    }
   }
 }

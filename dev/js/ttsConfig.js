@@ -1,3 +1,4 @@
+// === Синтезатор речи [Настройки] + Тестовая панель ===
 const ttsConfig = (function() {
   const awaitVoices = new Promise(
     res => (window.speechSynthesis.onvoiceschanged = res)
@@ -68,13 +69,58 @@ const ttsConfig = (function() {
   const tts = {
     zSyn: window.speechSynthesis,
     voices: [],
+    // == завершение audio
+    audioEnd: function() {
+      let self = this;
+      return new Promise(function(res, rej) {
+        (function loops() {
+          setTimeout(function() {
+            if (self.zSyn.speaking != false) {
+              loops();
+            } else {
+              return res('ok');
+            }
+          }, 250);
+        })();
+      });
+    },
+    // == произнести новую фразу
+    speak: function(obj) {
+      let utterThis = new SpeechSynthesisUtterance(obj);
+      console.log(utterThis);
+      utterThis.lang = 'ru-RU';
+      this.zSyn.speak(utterThis);
+    },
+    // == воспроизведение любой фразы
+    ttsOut: function(obj, next) {
+      // = объект фразы
+      for (let i in obj) {
+        this.speak(obj[i]);
+      }
+      // = если передана функция - выполняем её после аудиовоспроизведения
+      if (next) {
+        this.audioEnd().then(function(res) {
+          // == если передаётся свойство "Начать игру", привязываем объект соответствующей игры
+          if (next.game) {
+            let gameStart = next.func.bind(gameFuncs.city);
+            gameStart();
+          } else {
+            next.func();
+          }
+        });
+      }
+    },
+    // == загрузить список языков
     awaitVoices: function() {
-      return new Promise(res => (tts.zSyn.onvoiceschanged = res));
+      let self = this;
+      return new Promise(res => (self.zSyn.onvoiceschanged = res));
     },
     // == ждём загрузки объекта языков
     listVoices: function() {
+      let self = this;
       awaitVoices.then(function(data) {
         voices = tts.zSyn.getVoices();
+        self.voices = voices;
         testPanel.voices = voices;
 
         // == добавляем опции для выбора языка в DOM
