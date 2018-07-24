@@ -19,6 +19,7 @@ gulp.task('scripts', () => {
       'dev/lib/jquery.min.js',
       'dev/js/scripts.js',
       'dev/js/user.js',
+      'dev/js/Kallisto.js',
       'dev/js/ttsConfig.js',
       'dev/js/gameFuncs.js',
       'dev/js/tts.js'

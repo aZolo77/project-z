@@ -1,6 +1,7 @@
 // === [Точка входа] + [диалог с Kallisto] ===
 // == ждёт загрузки страницы
 $(function() {
+  // gameFuncs.city.startGame();
   const KallistoDialog = {
     name: 'Kallisto',
     // == html-объекты
@@ -143,5 +144,4 @@ $(function() {
   ttsConfig.testPanel.rangeChange();
   // = так можно достать массив языков: [window.speechSynthesis.getVoices()]
   ttsConfig.tts.listVoices();
-  console.log(KallistoDialog);
 });

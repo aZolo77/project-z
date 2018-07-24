@@ -42,7 +42,13 @@ const generalFuncs = (function() {
     });
   }
 
-  return { showDialogBlock, clearElement };
+  // = вывести рандомное значение массива {возвращает число}
+  function getRandomArrVal(arr) {
+    let itemNumber = Math.floor(Math.random() * (arr.length - 1));
+    return itemNumber;
+  }
+
+  return { showDialogBlock, clearElement, getRandomArrVal };
 })();
 
 const userData = (function() {
@@ -54,6 +60,32 @@ const userData = (function() {
   };
 
   return { user };
+})();
+
+const Kallisto = (function() {
+  kPhrases = {
+    encouraging: [
+      `Замечательно`,
+      `Моя очередь`,
+      `Вы отлично справляетесь`,
+      `Уверена, что вы победите`,
+      `Принято`,
+      `Я могу играть почти бесконечно`,
+      `Пусть победит сильнейший`
+    ],
+    nameCities: [
+      `Название следующего города `,
+      `Следующий город `,
+      `Пусть будет `,
+      `Итак, называю город `,
+      `В названии этого города есть что-то магическое. Только вслушайтесь в это слово `,
+      `Моё имя могло бы быть названием этого города, но его пожелали назвать `,
+      `На последнюю букву вашего последнего города начинается `
+    ],
+    nameStartCity: [`Пусть первым городом будет `]
+  };
+
+  return { kPhrases };
 })();
 
 // === Синтезатор речи [Настройки] + Тестовая панель ===
@@ -101,12 +133,6 @@ const ttsConfig = (function() {
         let selectedOption = self.voiceSelect.selectedOptions[0].getAttribute(
           'data-name'
         );
-        for (let i = 0; i < self.voices.length; i++) {
-          if (self.voices[i].name === selectedOption) {
-            // == добавляем созданной фразе свойство-обработчик языка
-            utterThis.voice = self.voices[i];
-          }
-        }
         // = устанавливаем настройки звука
         utterThis.rate = rate;
         utterThis.pitch = pitch;
@@ -115,7 +141,15 @@ const ttsConfig = (function() {
         // == проверяем, ввёл ли хомяк текст
         if (!utterThis.text) {
           utterThis.text = 'Введите фразу';
-          utterThis.voice = self.voices[15]; // = русский
+          utterThis.lang = 'ru-RU'; // = русский
+          // utterThis.voice = self.voices[15];
+        } else {
+          for (let i = 0; i < self.voices.length; i++) {
+            if (self.voices[i].name === selectedOption) {
+              // == добавляем созданной фразе свойство-обработчик языка
+              utterThis.voice = self.voices[i];
+            }
+          }
         }
 
         // == воспроизведение синтезированной из текста фразы
@@ -145,7 +179,6 @@ const ttsConfig = (function() {
     // == произнести новую фразу
     speak: function(obj) {
       let utterThis = new SpeechSynthesisUtterance(obj);
-      console.log(utterThis);
       utterThis.lang = 'ru-RU';
       this.zSyn.speak(utterThis);
     },
@@ -160,6 +193,7 @@ const ttsConfig = (function() {
         this.audioEnd().then(function(res) {
           // == если передаётся свойство "Начать игру", привязываем объект соответствующей игры
           if (next.game) {
+            // = привязываем объект игры {city}
             let gameStart = next.func.bind(gameFuncs.city);
             gameStart();
           } else {
@@ -256,10 +290,10 @@ const gameFuncs = (function() {
     },
     // == начало игры
     startGame: function() {
+      let self = this;
       console.log('== start ==', this);
       // устанавливаем родительский элемент для вывода результатов
       this.resTab = $('#cityResultTable');
-      let self = this;
       // устанавливаем родительские элементы для вводимых данных
       this.parentElement = $('#dialogHolder');
       this.kScoreHolder = $('.k_score_holder');
@@ -270,7 +304,7 @@ const gameFuncs = (function() {
       // == поместить массив с городами в localStorage или забрать оттуда (если уже есть) и присвоить объекту городов
       if (localStorage.getItem('cities') !== null) {
         this.initialArr = JSON.parse(localStorage.getItem('cities'));
-        this.showNewCity();
+        this.kShowNewCity();
       } else {
         this.getCitiesArr()
           .then(function(data) {
@@ -279,36 +313,94 @@ const gameFuncs = (function() {
               self.initialArr.push(item.name.toLowerCase());
             });
             localStorage.setItem('cities', JSON.stringify(self.initialArr));
-            self.showNewCity();
+            self.kShowNewCity();
           })
           .catch(function(err) {
             console.log(err);
           });
       }
     },
+    // == Каллисто называет очередной город
+    kNamesCity(cityName, obj) {
+      let self = this;
+      // = если очередь Каллисто
+      if (obj.Kallisto) {
+        let phrase;
+        // = Каллисто называет первый город
+        if (obj.startCity) {
+          phrase = { 1: Kallisto.kPhrases.nameStartCity + cityName };
+          ttsConfig.tts.ttsOut(phrase, {
+            func: self.giveUserToChoose.bind(self)
+          });
+        } else {
+          // = Каллисто говорит фразу с поощрением и называет город
+          let encouragingId = generalFuncs.getRandomArrVal(
+            Kallisto.kPhrases.encouraging
+          );
+          let nameCitiesId = generalFuncs.getRandomArrVal(
+            Kallisto.kPhrases.nameCities
+          );
+          phrase = {
+            1: `${Kallisto.kPhrases.encouraging[encouragingId]}`,
+            2: `${Kallisto.kPhrases.nameCities[nameCitiesId]} ${cityName}`
+          };
+          ttsConfig.tts.ttsOut(phrase, {
+            func: self.giveUserToChoose.bind(self)
+          });
+        }
+      }
+      // = показать город
+      this.emergeCity(cityName, { Kallisto: true });
+    },
+    // == временно показать название города
+    emergeCity: function(cityName, obj) {
+      cityName = cityName[0].toUpperCase() + cityName.slice(1);
+      let holder = `<div class='text-center'><span class='city_name_holder'>${cityName}</span></div>`;
+      this.parentElement.html(holder);
+
+      if (obj.Kallisto) {
+        // = анимация вывода города
+        $('.city_name_holder')
+          .toggle()
+          .animate({ display: 'inline-block', opacity: 1 }, 1000);
+        generalFuncs.showDialogBlock(this.parentElement);
+      }
+
+      // = если Гость назвал город, Каллисто ждёт, пока его покажут
+      if (obj.user) {
+        // = анимация вывода города
+        $('.city_name_holder')
+          .css({ 'background-color': 'orange' })
+          .toggle()
+          .animate({ display: 'inline-block', opacity: 1 }, 1000);
+        generalFuncs.showDialogBlock(this.parentElement);
+        return new Promise(function(res) {
+          setTimeout(function() {
+            res();
+          }, 2000);
+        });
+      }
+    },
     // == показать новое название города (от лица Каллисто)
-    showNewCity: function() {
+    kShowNewCity: function() {
       let self = this;
       // = если это начало игры - выводим название любого города
       if (this.gameArr.length == 0) {
-        // выбираем рандомный город
-        let itemNumber = Math.floor(
-          Math.random() * (this.initialArr.length - 1)
-        );
+        // = выбираем рандомный город
+        let itemNumber = generalFuncs.getRandomArrVal(self.initialArr);
         let cityName = this.initialArr[itemNumber];
-        // кладём его в игровой массив
+        // = кладём его в игровой массив
         this.currentCity = cityName;
-        // показываем название
-        this.parentElement.html(`<p>${cityName}</p>`);
-        generalFuncs.showDialogBlock(this.parentElement);
         // = передаём объект с названием города и именем отправителя
         let res = {
           val: cityName,
           host: 'Kallisto'
         };
         this.addToResults(res);
+        // = показываем название
+        this.kNamesCity(cityName, { Kallisto: true, startCity: true });
       } else {
-        // Каллисто ищет среди не названных городов
+        // = Каллисто ищет среди не названных городов
         let currentWord = this.searchCityByLetter();
         if (currentWord) {
           let res = {
@@ -316,24 +408,28 @@ const gameFuncs = (function() {
             host: 'Kallisto'
           };
           this.addToResults(res);
+          // показываем название города
+          this.kNamesCity(currentWord, { Kallisto: true });
         } else {
+          // = если К. не находит название на эту букву или города на эту букву закончились
           console.log(`Kallisto LOSE!! ${this.playerName} WINS!!!`);
+          // = ведём подсчёт очков
+          this.countResults();
         }
       }
-      setTimeout(function() {
-        self.giveUserToChoose();
-      }, 2000);
     },
     // == добавить город в таблицу результатов и на экран
     addToResults: function(city) {
+      let self = this;
       // = добавляем элемент в игровой массив
       this.gameArr.push(city.val);
       // = выводим на экран в таблицу
-      let newCity = `<span class="city_holder mb-1">${city.val}</span>`;
+      let cityName = city.val[0].toUpperCase() + city.val.slice(1);
+      let newCity = `<span class="city_holder mb-1">${cityName}</span>`;
       this.resTab.append(newCity);
       // = узнаём последнюю букву и кол-во букв
       let lastLetter = city.val.substring(city.val.length - 1);
-      this.currentLetter = lastLetter;
+      this.currentLetter = lastLetter.toLowerCase();
       // = меняем счёт при помощи кол-ва букв в слове
       let wordsLength = city.val.length;
       switch (city.host) {
@@ -341,7 +437,10 @@ const gameFuncs = (function() {
           console.log(`Отправитель: ${this.playerName}`);
           this.userScore += wordsLength;
           this.userScoreHolder.html(this.userScore);
-          this.showNewCity();
+          // = сначала показываем город, потом даём Kallisto выбрать
+          this.emergeCity(cityName, { user: true }).then(function(res) {
+            self.kShowNewCity();
+          });
           break;
 
         case 'Kallisto':
@@ -356,7 +455,7 @@ const gameFuncs = (function() {
       let input = `<div class="user_city_inp_holder">
                     <div class="row">
                       <div class="col-xs-12 col-sm-6 col-md-6 col-lg-6">
-                        <input type="text" class="form-control mb-2" placeholder="Введите название города" id="cityInput">
+                        <input type="text" class="city_input form-control" placeholder="Введите название города" id="cityInput">
                       </div>
                       <div class="col-xs-12 col-sm-6 col-md-6 col-lg-6">
                         <button class="btn btn-success btn-block exam_city_name">Отправить</button>
@@ -366,16 +465,28 @@ const gameFuncs = (function() {
       this.parentElement.html(input);
       generalFuncs.showDialogBlock(this.parentElement);
     },
-    // == принять ответ Игрока
+    // == принять ответ Игрока !!!!!!!!!!!!!!!! Исправить !!!!!!!!!!!!!!!!
     giveUserToChoose: function() {
       // == очистить элемент
       generalFuncs.clearElement($('.dialog_holder'));
       this.generateInput4User();
       $('.exam_city_name').click(this.examineCityName.bind(this));
     },
+    // == подсчитываем кол-во очков
+    countResults() {
+      if (this.userScore > this.kScore) {
+        console.log('Гость выигрывает по очкам');
+      } else if (this.userScore < this.kScore) {
+        console.log('Гость проигрывает по очкам');
+      } else {
+        console.log('Ничья');
+      }
+    },
     // == проверка наличия города в массиве
     examineCityName: function() {
-      let cityVal = $('#cityInput').val();
+      let cityVal = $('#cityInput')
+        .val()
+        .toLowerCase();
       let indexFromIA = this.initialArr.indexOf(cityVal);
       let indexFromUA = this.gameArr.indexOf(cityVal);
       // = если такой город есть в массиве initialArr и нет в массиве gameArr
@@ -407,6 +518,7 @@ const gameFuncs = (function() {
 // === [Точка входа] + [диалог с Kallisto] ===
 // == ждёт загрузки страницы
 $(function() {
+  // gameFuncs.city.startGame();
   const KallistoDialog = {
     name: 'Kallisto',
     // == html-объекты
@@ -549,5 +661,4 @@ $(function() {
   ttsConfig.testPanel.rangeChange();
   // = так можно достать массив языков: [window.speechSynthesis.getVoices()]
   ttsConfig.tts.listVoices();
-  console.log(KallistoDialog);
 });

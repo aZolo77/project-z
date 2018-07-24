@@ -43,12 +43,6 @@ const ttsConfig = (function() {
         let selectedOption = self.voiceSelect.selectedOptions[0].getAttribute(
           'data-name'
         );
-        for (let i = 0; i < self.voices.length; i++) {
-          if (self.voices[i].name === selectedOption) {
-            // == добавляем созданной фразе свойство-обработчик языка
-            utterThis.voice = self.voices[i];
-          }
-        }
         // = устанавливаем настройки звука
         utterThis.rate = rate;
         utterThis.pitch = pitch;
@@ -57,7 +51,15 @@ const ttsConfig = (function() {
         // == проверяем, ввёл ли хомяк текст
         if (!utterThis.text) {
           utterThis.text = 'Введите фразу';
-          utterThis.voice = self.voices[15]; // = русский
+          utterThis.lang = 'ru-RU'; // = русский
+          // utterThis.voice = self.voices[15];
+        } else {
+          for (let i = 0; i < self.voices.length; i++) {
+            if (self.voices[i].name === selectedOption) {
+              // == добавляем созданной фразе свойство-обработчик языка
+              utterThis.voice = self.voices[i];
+            }
+          }
         }
 
         // == воспроизведение синтезированной из текста фразы
@@ -87,7 +89,6 @@ const ttsConfig = (function() {
     // == произнести новую фразу
     speak: function(obj) {
       let utterThis = new SpeechSynthesisUtterance(obj);
-      console.log(utterThis);
       utterThis.lang = 'ru-RU';
       this.zSyn.speak(utterThis);
     },
@@ -102,6 +103,7 @@ const ttsConfig = (function() {
         this.audioEnd().then(function(res) {
           // == если передаётся свойство "Начать игру", привязываем объект соответствующей игры
           if (next.game) {
+            // = привязываем объект игры {city}
             let gameStart = next.func.bind(gameFuncs.city);
             gameStart();
           } else {

@@ -39,5 +39,11 @@ const generalFuncs = (function() {
     });
   }
 
-  return { showDialogBlock, clearElement };
+  // = вывести рандомное значение массива {возвращает число}
+  function getRandomArrVal(arr) {
+    let itemNumber = Math.floor(Math.random() * (arr.length - 1));
+    return itemNumber;
+  }
+
+  return { showDialogBlock, clearElement, getRandomArrVal };
 })();
