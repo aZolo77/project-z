@@ -230,20 +230,36 @@ const gameFuncs = (function() {
     },
     // == принять ответ Игрока !!!!!!!!!!!!!!!! Исправить !!!!!!!!!!!!!!!!
     giveUserToChoose: function() {
-      // == очистить элемент
-      generalFuncs.clearElement($('.dialog_holder'));
+      generalFuncs.clearElement(this.parentElement);
       this.generateInput4User();
       $('.exam_city_name').click(this.examineCityName.bind(this));
     },
     // == подсчитываем кол-во очков
     countResults() {
+      let self = this;
       if (this.userScore > this.kScore) {
         console.log('Гость выигрывает по очкам');
       } else if (this.userScore < this.kScore) {
         console.log('Гость проигрывает по очкам');
+        Kallisto.speaks(
+          {
+            1: `К сожалению, у меня закончились варианты.`,
+            2: `Но, вы проиграли по очкам`,
+            3: `Если хотите победить, нажмите продолжить`
+          },
+          self.continueGame
+        );
       } else {
         console.log('Ничья');
       }
+    },
+    // == продолжить игру
+    continueGame: function() {
+      let self = this;
+      // выводим 2 кнопки: 'Продолжить' и 'Закончить игру'
+      // = очистить элемент
+      generalFuncs.clearElement($('.dialog_holder'));
+      console.log('Continue...');
     },
     // == проверка наличия города в массиве
     examineCityName: function() {

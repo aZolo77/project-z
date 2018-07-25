@@ -51,43 +51,6 @@ const generalFuncs = (function() {
   return { showDialogBlock, clearElement, getRandomArrVal };
 })();
 
-const userData = (function() {
-  const user = {
-    name: 'Незнакомец',
-    setName: function(val) {
-      this.name = val;
-    }
-  };
-
-  return { user };
-})();
-
-const Kallisto = (function() {
-  kPhrases = {
-    encouraging: [
-      `Замечательно`,
-      `Моя очередь`,
-      `Вы отлично справляетесь`,
-      `Уверена, что вы победите`,
-      `Принято`,
-      `Я могу играть почти бесконечно`,
-      `Пусть победит сильнейший`
-    ],
-    nameCities: [
-      `Название следующего города `,
-      `Следующий город `,
-      `Пусть будет `,
-      `Итак, называю город `,
-      `В названии этого города есть что-то магическое. Только вслушайтесь в это слово `,
-      `Моё имя могло бы быть названием этого города, но его пожелали назвать `,
-      `На последнюю букву вашего последнего города начинается `
-    ],
-    nameStartCity: [`Пусть первым городом будет `]
-  };
-
-  return { kPhrases };
-})();
-
 // === Синтезатор речи [Настройки] + Тестовая панель ===
 const ttsConfig = (function() {
   const awaitVoices = new Promise(
@@ -233,6 +196,51 @@ const ttsConfig = (function() {
   };
 
   return { tts, testPanel };
+})();
+
+const userData = (function() {
+  const user = {
+    name: 'Незнакомец',
+    setName: function(val) {
+      this.name = val;
+    }
+  };
+
+  return { user };
+})();
+
+const Kallisto = (function() {
+  kPhrases = {
+    encouraging: [
+      `Замечательно`,
+      `Моя очередь`,
+      `Вы отлично справляетесь`,
+      `Уверена, что вы победите`,
+      `Принято`,
+      `Я могу играть почти бесконечно`,
+      `Пусть победит сильнейший`
+    ],
+    nameCities: [
+      `Название следующего города `,
+      `Следующий город `,
+      `Пусть будет `,
+      `Итак, называю город `,
+      `В названии этого города есть что-то магическое. Только вслушайтесь в это слово `,
+      `Моё имя могло бы быть названием этого города, но его пожелали назвать `,
+      `На последнюю букву вашего последнего города начинается `
+    ],
+    nameStartCity: [`Пусть первым городом будет `]
+  };
+
+  function speaks(phraseObj, next) {
+    if (next) {
+      ttsConfig.tts.ttsOut(phraseObj, { func: next });
+    } else {
+      ttsConfig.tts.ttsOut(phraseObj);
+    }
+  }
+
+  return { kPhrases, speaks };
 })();
 
 const gameFuncs = (function() {
@@ -467,20 +475,36 @@ const gameFuncs = (function() {
     },
     // == принять ответ Игрока !!!!!!!!!!!!!!!! Исправить !!!!!!!!!!!!!!!!
     giveUserToChoose: function() {
-      // == очистить элемент
-      generalFuncs.clearElement($('.dialog_holder'));
+      generalFuncs.clearElement(this.parentElement);
       this.generateInput4User();
       $('.exam_city_name').click(this.examineCityName.bind(this));
     },
     // == подсчитываем кол-во очков
     countResults() {
+      let self = this;
       if (this.userScore > this.kScore) {
         console.log('Гость выигрывает по очкам');
       } else if (this.userScore < this.kScore) {
         console.log('Гость проигрывает по очкам');
+        Kallisto.speaks(
+          {
+            1: `К сожалению, у меня закончились варианты.`,
+            2: `Но, вы проиграли по очкам`,
+            3: `Если хотите победить, нажмите продолжить`
+          },
+          self.continueGame
+        );
       } else {
         console.log('Ничья');
       }
+    },
+    // == продолжить игру
+    continueGame: function() {
+      let self = this;
+      // выводим 2 кнопки: 'Продолжить' и 'Закончить игру'
+      // = очистить элемент
+      generalFuncs.clearElement($('.dialog_holder'));
+      console.log('Continue...');
     },
     // == проверка наличия города в массиве
     examineCityName: function() {

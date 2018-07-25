@@ -21,5 +21,13 @@ const Kallisto = (function() {
     nameStartCity: [`Пусть первым городом будет `]
   };
 
-  return { kPhrases };
+  function speaks(phraseObj, next) {
+    if (next) {
+      ttsConfig.tts.ttsOut(phraseObj, { func: next });
+    } else {
+      ttsConfig.tts.ttsOut(phraseObj);
+    }
+  }
+
+  return { kPhrases, speaks };
 })();
