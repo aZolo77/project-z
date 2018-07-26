@@ -211,25 +211,35 @@ const userData = (function() {
 
 const Kallisto = (function() {
   kPhrases = {
+    nameStartCity: [`Пусть первым городом будет `],
     encouraging: [
+      `Хорошо. А Вы знали, что победит тот, кто наберёт бо́льшее количество очков?`,
       `Замечательно`,
       `Моя очередь`,
       `Вы отлично справляетесь`,
       `Уверена, что вы победите`,
       `Принято`,
       `Я могу играть почти бесконечно`,
-      `Пусть победит сильнейший`
+      `Пусть победит сильнейший`,
+      `Я бы с удовольствием побродила по улицам этого города`,
+      `Вы наверняка были в этом городе`
     ],
     nameCities: [
-      `Название следующего города `,
-      `Следующий город `,
-      `Пусть будет `,
-      `Итак, называю город `,
-      `В названии этого города есть что-то магическое. Только вслушайтесь в это слово `,
-      `Моё имя могло бы быть названием этого города, но его пожелали назвать `,
-      `На последнюю букву вашего последнего города начинается `
+      `Название следующего города`,
+      `Следующий город`,
+      `Пусть будет`,
+      `Итак, называю город`,
+      `В названии следующего города есть что-то магическое. Только вслушайтесь в это слово`,
+      `Моё имя могло бы быть названием следующего города, но его пожелали назвать`,
+      `На последнюю букву вашего последнего города начинается`
     ],
-    nameStartCity: [`Пусть первым городом будет `]
+    fails: {
+      emptyString: 'Пожалуйста, введите название города',
+      noCityName: 'Такого города не существует или я о нём просто не знаю',
+      repeateCity: 'Мы уже называли этот город',
+      wrongLetter: 'Название города должно начинаться на букву'
+    },
+    wins: 'Поздравляю! Вы победили непобедимую меня'
   };
 
   function speaks(phraseObj, next) {
@@ -256,14 +266,58 @@ const gameFuncs = (function() {
     resTab: null,
     // == текущий город
     currentCity: null,
-    // = Последняя буква
+    // = Последняя, предыдущая и запрещённые буквы
     currentLetter: null,
+    previousLetter: null,
+    forbiddenLetters: ['ё', 'ъ', 'ь'],
+    // = флаги {фильтры игры}
+    permisions: {
+      // = разрешение называть город на предыдущую букву
+      previousLetter: false
+    },
     // = счёт игрока
     userScore: 0,
     userScoreHolder: null,
     // = счёт Каллисто
     kScore: 0,
     kScoreHolder: null,
+    // == длины массивов фраз и текущий id массива
+    kPhrasesStuff: {
+      encouragingArrLength: Kallisto.kPhrases.encouraging.length - 1,
+      encouragingId: 0,
+      nameCitiesArrLength: Kallisto.kPhrases.nameCities.length - 1,
+      nameCitiesId: 0
+    },
+    // == проверка на наличие запрещённых букв в конце последнего города
+    check4LastLetter: function() {
+      let self = this;
+      let letter = null;
+      this.forbiddenLetters.forEach(function(item) {
+        if (self.currentLetter == item) {
+          console.log(`Запрещённая буква: '${item}'`);
+          letter = item;
+        }
+      });
+      if (letter) {
+        return letter;
+      } else {
+        return false;
+      }
+    },
+    // == разрешение использовать предпоследнюю букву слова
+    askToUsePreviouseLetter: function() {
+      console.log('Can I use previous letter, please');
+    },
+    // == выбираем только ту фразу, которой не было в прошлый цикл
+    getNewPhrase: function(name, arrName) {
+      let arrNum = generalFuncs.getRandomArrVal(Kallisto.kPhrases[arrName]);
+      if (this.kPhrasesStuff[name] == arrNum) {
+        arrNum = this.kPhrasesStuff.encouragingArrLength - arrNum;
+      }
+      // = передаём текущее значение в объект с фразами Каллисто
+      this.kPhrasesStuff[name] = arrNum;
+      return arrNum;
+    },
     // == найти самое первое значение, начинающееся с текущей буквы
     searchCityByLetter: function() {
       let self = this;
@@ -329,33 +383,29 @@ const gameFuncs = (function() {
       }
     },
     // == Каллисто называет очередной город
-    kNamesCity(cityName, obj) {
+    kNamesCity: function(cityName, obj) {
       let self = this;
-      // = если очередь Каллисто
-      if (obj.Kallisto) {
-        let phrase;
-        // = Каллисто называет первый город
-        if (obj.startCity) {
-          phrase = { 1: Kallisto.kPhrases.nameStartCity + cityName };
-          ttsConfig.tts.ttsOut(phrase, {
-            func: self.giveUserToChoose.bind(self)
-          });
-        } else {
-          // = Каллисто говорит фразу с поощрением и называет город
-          let encouragingId = generalFuncs.getRandomArrVal(
-            Kallisto.kPhrases.encouraging
-          );
-          let nameCitiesId = generalFuncs.getRandomArrVal(
-            Kallisto.kPhrases.nameCities
-          );
-          phrase = {
-            1: `${Kallisto.kPhrases.encouraging[encouragingId]}`,
-            2: `${Kallisto.kPhrases.nameCities[nameCitiesId]} ${cityName}`
-          };
-          ttsConfig.tts.ttsOut(phrase, {
-            func: self.giveUserToChoose.bind(self)
-          });
-        }
+      let phrase;
+      // = Каллисто называет первый город
+      if (obj.startCity) {
+        phrase = {
+          1: Kallisto.kPhrases.nameStartCity[0] + cityName
+        };
+        ttsConfig.tts.ttsOut(phrase, {
+          func: self.giveUserToChoose.bind(self)
+        });
+      } else {
+        // = Каллисто говорит фразу с поощрением и называет город
+        let encouragingId = this.getNewPhrase('encouragingId', 'encouraging');
+        let nameCitiesId = this.getNewPhrase('nameCitiesId', 'nameCities');
+        phrase = {
+          1: Kallisto.kPhrases.encouraging[encouragingId],
+          2: Kallisto.kPhrases.nameCities[nameCitiesId],
+          3: cityName
+        };
+        ttsConfig.tts.ttsOut(phrase, {
+          func: self.giveUserToChoose.bind(self)
+        });
       }
       // = показать город
       this.emergeCity(cityName, { Kallisto: true });
@@ -397,8 +447,6 @@ const gameFuncs = (function() {
         // = выбираем рандомный город
         let itemNumber = generalFuncs.getRandomArrVal(self.initialArr);
         let cityName = this.initialArr[itemNumber];
-        // = кладём его в игровой массив
-        this.currentCity = cityName;
         // = передаём объект с названием города и именем отправителя
         let res = {
           val: cityName,
@@ -416,19 +464,32 @@ const gameFuncs = (function() {
             host: 'Kallisto'
           };
           this.addToResults(res);
-          // показываем название города
+          // = показываем название города
           this.kNamesCity(currentWord, { Kallisto: true });
         } else {
-          // = если К. не находит название на эту букву или города на эту букву закончились
-          console.log(`Kallisto LOSE!! ${this.playerName} WINS!!!`);
-          // = ведём подсчёт очков
-          this.countResults();
+          // ================================================================================
+          // !!!!!!!!!!!!!!!!!!!!! проверить массив запрещённых букв !!!!!!!!!!!!!!!!!!!!!!!!
+          let letter = this.check4LastLetter();
+          if (!letter) {
+            // = если К. не находит название на эту букву или города́ на эту букву закончились
+            console.log(
+              'Kallisto не находит название на эту букву или города́ на эту букву закончились!!'
+            );
+            // = ведём подсчёт очков
+            this.countResults();
+          } else {
+            // = запросить разрешение называть города на предпоследнюю букву
+            console.log(letter);
+          }
+          // ================================================================================
         }
       }
     },
     // == добавить город в таблицу результатов и на экран
     addToResults: function(city) {
       let self = this;
+      // = меняем значение текущего города в объекте игры
+      this.currentCity = city.val;
       // = добавляем элемент в игровой массив
       this.gameArr.push(city.val);
       // = выводим на экран в таблицу
@@ -473,7 +534,7 @@ const gameFuncs = (function() {
       this.parentElement.html(input);
       generalFuncs.showDialogBlock(this.parentElement);
     },
-    // == принять ответ Игрока !!!!!!!!!!!!!!!! Исправить !!!!!!!!!!!!!!!!
+    // == принять ответ Игрока
     giveUserToChoose: function() {
       generalFuncs.clearElement(this.parentElement);
       this.generateInput4User();
@@ -483,9 +544,12 @@ const gameFuncs = (function() {
     countResults() {
       let self = this;
       if (this.userScore > this.kScore) {
-        console.log('Гость выигрывает по очкам');
+        // Гость выигрывает по очкам
+        Kallisto.speaks({ 1: Kallisto.kPhrases.wins }, function() {
+          console.log('Гость победил');
+        });
       } else if (this.userScore < this.kScore) {
-        console.log('Гость проигрывает по очкам');
+        // = Гость проигрывает по очкам
         Kallisto.speaks(
           {
             1: `К сожалению, у меня закончились варианты.`,
@@ -495,7 +559,14 @@ const gameFuncs = (function() {
           self.continueGame
         );
       } else {
-        console.log('Ничья');
+        // = ничья
+        Kallisto.speaks(
+          {
+            1: `У нас ничья`,
+            3: `Если хотите победить, нажмите продолжить`
+          },
+          self.continueGame
+        );
       }
     },
     // == продолжить игру
@@ -508,9 +579,32 @@ const gameFuncs = (function() {
     },
     // == проверка наличия города в массиве
     examineCityName: function() {
+      let self = this;
       let cityVal = $('#cityInput')
         .val()
         .toLowerCase();
+
+      // = гость не ввёл название
+      if (!cityVal) {
+        $('.exam_city_name').addClass('disabled');
+        Kallisto.speaks({ 1: Kallisto.kPhrases.fails.emptyString }, function() {
+          $('.exam_city_name').removeClass('disabled');
+        });
+        return false;
+      }
+
+      // = если Гость назвал город не на ту букву
+      /* Временно отрубим ф-ци, чтобы было проще тестить
+      let firstLetter = cityVal.substr(0, 1);
+      if (this.currentLetter != firstLetter.toLowerCase()) {
+        Kallisto.speaks({
+          1: Kallisto.kPhrases.fails.wrongLetter,
+          2: self.currentLetter
+        });
+        return false;
+      }
+      */
+
       let indexFromIA = this.initialArr.indexOf(cityVal);
       let indexFromUA = this.gameArr.indexOf(cityVal);
       // = если такой город есть в массиве initialArr и нет в массиве gameArr
@@ -525,11 +619,13 @@ const gameFuncs = (function() {
         this.addToResults(res);
       } else {
         if (indexFromUA != -1) {
-          console.log(`Город ${cityVal} уже назывался`);
+          // = Город уже назывался
+          Kallisto.speaks({ 1: Kallisto.kPhrases.fails.repeateCity });
           return false;
         }
         if (indexFromIA == -1) {
-          console.log(`Города ${cityVal} нет в массиве`);
+          // = Города нет в массиве
+          Kallisto.speaks({ 1: Kallisto.kPhrases.fails.noCityName });
           return false;
         }
       }
@@ -566,11 +662,6 @@ $(function() {
     // == получить имя гостя
     nameYourself: function() {
       let self = this;
-      // снимаем обработчик с основной кнопки
-      this.treeObjs.dialogStartBtn.removeEventListener(
-        'click',
-        self.nameYourself
-      );
       this.treeObjs.dialogHolder.html(
         `<div class="name_holder">
         <div class="dialog_heading text-center mb-2">Введите Ваше имя и нажмите "Подтвердить"</div>
@@ -592,6 +683,16 @@ $(function() {
     // == приветствие гостя
     sayHi: function() {
       let self = this;
+      // прячем start-кнопку и удаляем её из html
+      $(this.treeObjs.dialogStartBtn).animate(
+        { opacity: '0' },
+        1000,
+        function() {
+          $(this)
+            .hide('slow')
+            .remove();
+        }
+      );
       // = объект для приветствия
       let nameHandlerInfo = {
         name: $('#userName').val(),
@@ -654,7 +755,8 @@ $(function() {
       if (btn.hasClass('positive_answer')) {
         let phrase = {
           1: `Я очень рада ${userData.user.name}.`,
-          2: `Игра называется "Города́".`
+          2: `Игра называется "Города́"`,
+          3: `Победит тот, кто наберёт бо́льшее количество очков`
         };
         ttsConfig.tts.ttsOut(phrase, {
           func: gameFuncs.city.startGame,

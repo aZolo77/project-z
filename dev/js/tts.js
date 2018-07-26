@@ -25,11 +25,6 @@ $(function() {
     // == получить имя гостя
     nameYourself: function() {
       let self = this;
-      // снимаем обработчик с основной кнопки
-      this.treeObjs.dialogStartBtn.removeEventListener(
-        'click',
-        self.nameYourself
-      );
       this.treeObjs.dialogHolder.html(
         `<div class="name_holder">
         <div class="dialog_heading text-center mb-2">Введите Ваше имя и нажмите "Подтвердить"</div>
@@ -51,6 +46,16 @@ $(function() {
     // == приветствие гостя
     sayHi: function() {
       let self = this;
+      // прячем start-кнопку и удаляем её из html
+      $(this.treeObjs.dialogStartBtn).animate(
+        { opacity: '0' },
+        1000,
+        function() {
+          $(this)
+            .hide('slow')
+            .remove();
+        }
+      );
       // = объект для приветствия
       let nameHandlerInfo = {
         name: $('#userName').val(),
@@ -113,7 +118,8 @@ $(function() {
       if (btn.hasClass('positive_answer')) {
         let phrase = {
           1: `Я очень рада ${userData.user.name}.`,
-          2: `Игра называется "Города́".`
+          2: `Игра называется "Города́"`,
+          3: `Победит тот, кто наберёт бо́льшее количество очков`
         };
         ttsConfig.tts.ttsOut(phrase, {
           func: gameFuncs.city.startGame,
