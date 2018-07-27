@@ -39,7 +39,7 @@ const gameFuncs = (function() {
       let letter = null;
       this.forbiddenLetters.forEach(function(item) {
         if (self.currentLetter == item) {
-          console.log(`Запрещённая буква: '${item}'`);
+          // console.log(`Запрещённая буква: '${item}'`);
           letter = item;
         }
       });
@@ -49,9 +49,53 @@ const gameFuncs = (function() {
         return false;
       }
     },
+    // == показать диалог для получения согласия
+    showConfirmDialog: function(options, func1, func2) {
+      let self = this;
+      let content = `<div class="agreement_box text-center">
+                        <button class="btn btn-success positive_answer btn-lg mr-3 mb-2 mb-sm-0">${
+                          options.yes
+                        }</button>
+                        <button class="btn btn-secondary negative_answer btn-lg mb-2 mb-sm-0">${
+                          options.no
+                        }</button>
+                    </div>`;
+      this.parentElement.html(content);
+
+      // == анимация для раскрытия диалогового блока
+      generalFuncs.showDialogBlock(this.parentElement);
+
+      $('.positive_answer').click(func1);
+      $('.negative_answer').click(func2.bind(self));
+    },
     // == разрешение использовать предпоследнюю букву слова
     askToUsePreviouseLetter: function() {
+      let self = this;
       console.log('Can I use previous letter, please');
+      // = показать диалог для подтверждения [фразы, функция при согласии, функция при отказе]
+      self.showConfirmDialog(
+        { yes: 'Продолжить', no: 'Закончить' },
+        function() {
+          // = разрешить называть города на предыдущую букву
+          console.log('Гость разрешает называть города на предыдущую букву');
+          self.permisions.previousLetter = true;
+          // назвать город на предыдущую букву в слове !!!!!!!!!!!!!!!!!!!
+          let currentWord = self.searchCityByLetter(true);
+          if (currentWord) {
+            let res = {
+              val: currentWord,
+              host: 'Kallisto'
+            };
+            self.addToResults(res);
+            // = показываем название города
+            self.kNamesCity(currentWord, { Kallisto: true });
+          } else {
+            // = Гость побеждает
+          }
+          // ======================= сл функция - Kalisto называет слово на предыдущую букву ==================
+        },
+        self.countResults
+      );
     },
     // == выбираем только ту фразу, которой не было в прошлый цикл
     getNewPhrase: function(name, arrName) {
@@ -64,17 +108,34 @@ const gameFuncs = (function() {
       return arrNum;
     },
     // == найти самое первое значение, начинающееся с текущей буквы
-    searchCityByLetter: function() {
+    searchCityByLetter: function(prev) {
       let self = this;
-      let cityName = this.initialArr.find(function(item) {
-        let letter = item.substr(0, 1);
-        if (letter == self.currentLetter) {
-          // проверка на наличие в массиве игры
-          if (self.gameArr.indexOf(item) == -1) {
-            return item;
+      let cityName;
+      // = город ищется по последней букве
+      if (!prev) {
+        cityName = this.initialArr.find(function(item) {
+          let letter = item.substr(0, 1);
+          if (letter == self.currentLetter) {
+            // проверка на наличие в массиве игры
+            if (self.gameArr.indexOf(item) == -1) {
+              return item;
+            }
           }
-        }
-      });
+        });
+      }
+      // = город ищется по предпоследней букве
+      if (prev) {
+        console.log('Город ищется по предыдущей букве');
+        cityName = this.initialArr.find(function(item) {
+          let letter = item.substr(0, 1);
+          if (letter == self.previousLetter) {
+            // проверка на наличие в массиве игры
+            if (self.gameArr.indexOf(item) == -1) {
+              return item;
+            }
+          }
+        });
+      }
       // = возвращает название города или undefined
       return cityName;
     },
@@ -212,19 +273,39 @@ const gameFuncs = (function() {
           // = показываем название города
           this.kNamesCity(currentWord, { Kallisto: true });
         } else {
-          // ================================================================================
-          // !!!!!!!!!!!!!!!!!!!!! проверить массив запрещённых букв !!!!!!!!!!!!!!!!!!!!!!!!
-          let letter = this.check4LastLetter();
+          // = проверить массив запрещённых букв
+          let letter = this.check4LastLetter(true);
+          // = Каллисто не нашла город на обычную букву
           if (!letter) {
-            // = если К. не находит название на эту букву или города́ на эту букву закончились
-            console.log(
-              'Kallisto не находит название на эту букву или города́ на эту букву закончились!!'
-            );
-            // = ведём подсчёт очков
+            // = ведём подсчёт очков {конец}
             this.countResults();
           } else {
-            // = запросить разрешение называть города на предпоследнюю букву
-            console.log(letter);
+            // = если есть разрешение называть города на предыдущую букву последнего слова
+            if (this.permisions.previousLetter) {
+              // назвать город на предыдущую букву в слове
+              let currentWord = this.searchCityByLetter(true);
+              if (currentWord) {
+                let res = {
+                  val: currentWord,
+                  host: 'Kallisto'
+                };
+                this.addToResults(res);
+                // = показываем название города
+                this.kNamesCity(currentWord, { Kallisto: true });
+              } else {
+                // = Гость побеждает
+              }
+            } else {
+              // = запросить разрешение называть города на предпоследнюю букву
+              Kallisto.speaks(
+                {
+                  1: `Название последнего города заканчивается на букву ${letter}`,
+                  2: 'Городов на эту букву не существует',
+                  3: 'В таких случаях я могу называть города на предыдущую букву, либо можем посчитать очки и закончить игру'
+                },
+                self.askToUsePreviouseLetter.bind(self)
+              );
+            }
           }
           // ================================================================================
         }
@@ -241,11 +322,13 @@ const gameFuncs = (function() {
       let cityName = city.val[0].toUpperCase() + city.val.slice(1);
       let newCity = `<span class="city_holder mb-1">${cityName}</span>`;
       this.resTab.append(newCity);
-      // = узнаём последнюю букву и кол-во букв
-      let lastLetter = city.val.substring(city.val.length - 1);
+      // = узнаём последнюю букву(+предыдущую) и кол-во букв
+      let lastLetter = city.val.substr(city.val.length - 1, 1);
       this.currentLetter = lastLetter.toLowerCase();
-      // = меняем счёт при помощи кол-ва букв в слове
+      let prevLetter = city.val.substr(city.val.length - 2, 1);
+      this.previousLetter = prevLetter.toLowerCase();
       let wordsLength = city.val.length;
+      // = меняем счёт при помощи кол-ва букв в слове
       switch (city.host) {
         case this.playerName:
           console.log(`Отправитель: ${this.playerName}`);
@@ -278,6 +361,8 @@ const gameFuncs = (function() {
                   </div>`;
       this.parentElement.html(input);
       generalFuncs.showDialogBlock(this.parentElement);
+      // = ставим autofocus для инпута
+      document.getElementById('cityInput').focus();
     },
     // == принять ответ Игрока
     giveUserToChoose: function() {
@@ -301,7 +386,7 @@ const gameFuncs = (function() {
             2: `Но, вы проиграли по очкам`,
             3: `Если хотите победить, нажмите продолжить`
           },
-          self.continueGame
+          self.continueGame.bind(self)
         );
       } else {
         // = ничья
@@ -310,7 +395,7 @@ const gameFuncs = (function() {
             1: `У нас ничья`,
             3: `Если хотите победить, нажмите продолжить`
           },
-          self.continueGame
+          self.continueGame.bind(self)
         );
       }
     },
@@ -321,6 +406,22 @@ const gameFuncs = (function() {
       // = очистить элемент
       generalFuncs.clearElement($('.dialog_holder'));
       console.log('Continue...');
+      this.showConfirmDialog(
+        { yes: 'Продолжить', no: 'Закончить игру' },
+        function() {
+          console.log('Гость продолжает игру');
+          // ========= вывести окно, в котором гость может ввести следующее слово =========
+        },
+        function() {
+          console.log('Гость заканчивает игру');
+          self.endGame();
+          // ========= полность завершить игру =========
+        }
+      );
+    },
+    // == окончательное завершение игры
+    endGame: function() {
+      console.log('Полное завершение: выигрыш или проигрыш');
     },
     // == проверка наличия города в массиве
     examineCityName: function() {

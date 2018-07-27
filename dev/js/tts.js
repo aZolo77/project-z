@@ -99,8 +99,8 @@ $(function() {
     showConfirmDialog: function() {
       let self = this;
       let content = `<div class="agreement_box text-center">
-                        <button class="btn btn-success positive_answer btn-lg mr-3">Yes</button>
-                        <button class="btn btn-secondary negative_answer btn-lg">No</button>
+                        <button class="btn btn-success positive_answer btn-lg mr-3 mb-2 mb-sm-0">Yes</button>
+                        <button class="btn btn-secondary negative_answer btn-lg mb-2 mb-sm-0">No</button>
                     </div>`;
       this.treeObjs.dialogHolder.html(content);
 
