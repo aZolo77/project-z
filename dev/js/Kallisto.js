@@ -27,7 +27,7 @@ const Kallisto = (function() {
       repeateCity: 'Мы уже называли этот город',
       wrongLetter: 'Название города должно начинаться на букву'
     },
-    wins: 'Поздравляю! Вы победили непобедимую меня'
+    wins: `Поздравляю! Вы победили непобедимую меня`
   };
 
   function speaks(phraseObj, next) {

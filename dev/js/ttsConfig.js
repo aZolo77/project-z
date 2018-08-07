@@ -69,6 +69,8 @@ const ttsConfig = (function() {
   };
 
   const tts = {
+    // = объект с русским голосом
+    // rusVoice: responsiveVoice.getResponsiveVoice('Russian Female'),
     zSyn: window.speechSynthesis,
     voices: [],
     // == завершение audio
@@ -89,7 +91,14 @@ const ttsConfig = (function() {
     // == произнести новую фразу
     speak: function(obj) {
       let utterThis = new SpeechSynthesisUtterance(obj);
+      utterThis.rate = 1.1;
+      utterThis.pitch = 0.8;
       utterThis.lang = 'ru-RU';
+      this.voices.filter(function(item) {
+        if (item.lang.search(/ru/) != -1) {
+          utterThis.voice = item;
+        }
+      });
       this.zSyn.speak(utterThis);
     },
     // == воспроизведение любой фразы
