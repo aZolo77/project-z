@@ -17,6 +17,7 @@ gulp.task('scripts', () => {
   return gulp
     .src([
       'dev/lib/jquery.min.js',
+      'dev/lib/circle-progress.js',
       'dev/js/scripts.js',
       'dev/js/ttsConfig.js',
       'dev/js/user.js',

@@ -12,6 +12,8 @@ $(function() {
       this.treeObjs.dialogHolder = dialogHolder;
       let dialogStartBtn = document.getElementById('dialogBtn');
       this.treeObjs.dialogStartBtn = dialogStartBtn;
+      let kSmile = $('#kSmile');
+      this.treeObjs.kSmile = kSmile;
     },
     // == привязка событий к html-объектам
     bindEvents: function() {
@@ -88,6 +90,7 @@ $(function() {
       let self = this;
       // == очистить диалоговое окно
       generalFuncs.clearElement(self.treeObjs.dialogHolder);
+      self.treeObjs.kSmile.html('<i class="far fa-smile-beam"></i>');
       // = предложение сыграть
       let phrase = {
         1: `Меня зовут ${this.name}`,
@@ -145,9 +148,11 @@ $(function() {
   KallistoDialog.bindEvents();
 
   // gameFuncs.city.startGame(); // [чтобы сразу начать игру "Cities"]
-  ttsConfig.testPanel.defineElements();
-  ttsConfig.testPanel.definePhraseSubmition();
-  ttsConfig.testPanel.rangeChange();
+  // ======= тестовая панель =======
+  // ttsConfig.testPanel.defineElements();
+  // ttsConfig.testPanel.definePhraseSubmition();
+  // ttsConfig.testPanel.rangeChange();
+
   // = так можно достать массив языков: [window.speechSynthesis.getVoices()]
   ttsConfig.tts.listVoices();
 });

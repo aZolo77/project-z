@@ -3,6 +3,8 @@ const gameFuncs = (function() {
   const city = {
     initialArr: [],
     gameArr: [],
+    // = раунд
+    round: 1,
     // = имя игрока
     playerName: null,
     // = родительский объект для ввода названия города
@@ -82,7 +84,7 @@ const gameFuncs = (function() {
       }
     },
     // = максимальный счёт и его установка
-    maxScore: 20,
+    maxScore: 100,
     increaseScore: function() {
       let self = this;
       self.maxScore += 100;
@@ -472,7 +474,7 @@ const gameFuncs = (function() {
       let self = this;
       // = если перед этой ф-цией запрашивалось подтверждение на продолжение игры
       if (emptySlot) {
-        // = вывести пустой слов для Каллисто
+        // = вывести пустое поле для Каллисто
         let newCity = `<span class="city_holder mb-1"></span>`;
         this.resTab.append(newCity);
       }
@@ -489,8 +491,21 @@ const gameFuncs = (function() {
           },
           function() {
             self.currentLetter = self.previousLetter;
+            // = запускаем таймер
+            if (self.round < 2) {
+              self.timerStart();
+            } else {
+              self.timerStart(true);
+            }
           }
         );
+      } else {
+        // = только запускаем таймер
+        if (self.round < 2) {
+          self.timerStart();
+        } else {
+          self.timerStart(true);
+        }
       }
       this.generateInput4User();
       $('.exam_city_name').click(this.examineCityName.bind(this));
@@ -579,8 +594,11 @@ const gameFuncs = (function() {
       }
     },
     // == окончательное завершение игры [Полное завершение: выигрыш или проигрыш]
-    endGame: function() {
+    endGame: function(timer) {
       let self = this;
+      if (timer) {
+        Kallisto.speaks({ 1: 'Время вышло' });
+      }
       // = у Гостя счёт выше
       if (this.userScore > this.kScore) {
         Kallisto.speaks(
@@ -627,6 +645,7 @@ const gameFuncs = (function() {
     // == визуализация "Победы"
     visualizeVictory: function() {
       this.clearCityResultsTable();
+      $('#kSmile').html('<i class="far fa-sad-cry"></i>');
       $('.game_info_panel_holder, .dialog_holder').hide();
       generalFuncs.clearElement($('.dialog_holder'));
       $('#victoryMsg').text('Вы победили !!!');
@@ -638,6 +657,7 @@ const gameFuncs = (function() {
     // == визуализация "Проигрыша"
     visualizeLoss: function() {
       this.clearCityResultsTable();
+      $('#kSmile').html('<i class="fas fa-grin-tongue"></i>');
       $('.game_info_panel_holder, .dialog_holder').hide();
       generalFuncs.clearElement($('.dialog_holder'));
       $('#victoryMsg').text('Побеждает Каллисто !!!');
@@ -699,6 +719,9 @@ const gameFuncs = (function() {
           val: cityVal,
           host: this.playerName
         };
+        // = останавливаем таймер
+        this.round++;
+        this.stopTimer();
         this.addToResults(res);
       } else {
         if (indexFromUA != -1) {
@@ -711,6 +734,49 @@ const gameFuncs = (function() {
           Kallisto.speaks({ 1: Kallisto.kPhrases.fails.noCityName });
           return false;
         }
+      }
+    },
+    // == начало отсчёта
+    timerStart: function(round) {
+      let self = this;
+      // = опции для таймера
+      let progressOptions = {
+        value: 1,
+        insertMode: 'append',
+        size: 80,
+        startAngle: -1.55,
+        animation: {
+          // 30 секунд на ответ
+          duration: 30000
+        },
+        emptyFill: '#414b4c',
+        fill: {
+          gradient: ['orange', '#28a745']
+        }
+      };
+
+      // прогресс бар
+      if (!round) {
+        $('.timer_bar')
+          .circleProgress(progressOptions)
+          .on('circle-animation-progress', self.timerEnd);
+      } else {
+        $('.timer_bar').circleProgress('redraw');
+      }
+    },
+    // == остановка таймера
+    stopTimer: function() {
+      let widget = $('.timer_bar');
+      $(widget.circleProgress('widget')).stop();
+    },
+    // == если таймер дошёл до конца
+    timerEnd: function(event, animationProgress, stepValue) {
+      if (animationProgress == 1) {
+        gameFuncs.city.endGame(true);
+      } else {
+        $(this)
+          .find('strong')
+          .text(stepValue.toFixed(2).substr(2));
       }
     }
   };

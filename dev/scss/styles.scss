@@ -75,6 +75,16 @@ li {
       color: #ff0;
       text-shadow: 0 0 3px #ff0;
     }
+    .timer_bar {
+      position: relative;
+      .time_holder {
+        position: absolute;
+        top: 28px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+      }
+    }
   }
   .score_holder {
     .increase_score {

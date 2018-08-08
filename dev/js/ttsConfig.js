@@ -92,7 +92,7 @@ const ttsConfig = (function() {
     speak: function(obj) {
       let utterThis = new SpeechSynthesisUtterance(obj);
       utterThis.rate = 1.1;
-      utterThis.pitch = 0.8;
+      utterThis.pitch = 0.9;
       utterThis.lang = 'ru-RU';
       this.voices.filter(function(item) {
         if (item.lang.search(/ru/) != -1) {
@@ -145,7 +145,7 @@ const ttsConfig = (function() {
 
           option.setAttribute('data-lang', voices[i].lang);
           option.setAttribute('data-name', voices[i].name);
-          testPanel.voiceSelect.appendChild(option);
+          // testPanel.voiceSelect.appendChild(option);
         }
       });
     }
