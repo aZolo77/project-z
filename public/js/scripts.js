@@ -608,7 +608,30 @@ const generalFuncs = (function() {
     return itemNumber;
   }
 
-  return { showDialogBlock, clearElement, getRandomArrVal };
+  // == таймер обратного отсчёта
+  function startTimer(duration, disp) {
+    let timer = duration;
+    let mins, secs;
+    let timerInterval = setInterval(function() {
+      mins = parseInt(timer / 60, 10);
+      // console.log(`mins: ${mins}`);
+      secs = parseInt(timer % 60, 10);
+      // console.log(`secs: ${secs}`);
+
+      mins = mins < 10 ? '0' + mins : mins;
+      secs = secs < 10 ? '0' + secs : secs;
+
+      disp.text(`${mins}:${secs}`);
+
+      if (--timer < 0) {
+        disp.text('00:00');
+        clearInterval(timerInterval);
+      }
+    }, 1000);
+    return timerInterval;
+  }
+
+  return { showDialogBlock, clearElement, getRandomArrVal, startTimer };
 })();
 
 // === Синтезатор речи [Настройки] + Тестовая панель ===
@@ -826,8 +849,9 @@ const gameFuncs = (function() {
   const city = {
     initialArr: [],
     gameArr: [],
-    // = раунд
+    // = раунд и id текущего таймера
     round: 1,
+    timerId: null,
     // = имя игрока
     playerName: null,
     // = родительский объект для ввода названия города
@@ -1562,6 +1586,7 @@ const gameFuncs = (function() {
     // == начало отсчёта
     timerStart: function(round) {
       let self = this;
+      let timerId;
       // = опции для таймера
       let progressOptions = {
         value: 1,
@@ -1569,8 +1594,8 @@ const gameFuncs = (function() {
         size: 80,
         startAngle: -1.55,
         animation: {
-          // 30 секунд на ответ
-          duration: 30000
+          // = 32 секунд на ответ
+          duration: 32000
         },
         emptyFill: '#414b4c',
         fill: {
@@ -1578,28 +1603,33 @@ const gameFuncs = (function() {
         }
       };
 
-      // прогресс бар
+      // = прогресс бар
       if (!round) {
         $('.timer_bar')
           .circleProgress(progressOptions)
           .on('circle-animation-progress', self.timerEnd);
+        let holder = $('.timer_bar').find('.time_holder');
+        timerId = generalFuncs.startTimer(30, holder);
       } else {
         $('.timer_bar').circleProgress('redraw');
+        let holder = $('.timer_bar').find('.time_holder');
+        timerId = generalFuncs.startTimer(30, holder);
       }
+      self.timerId = timerId;
     },
     // == остановка таймера
     stopTimer: function() {
+      let self = this;
       let widget = $('.timer_bar');
+      // = останавливаем работу прогресс-бара
       $(widget.circleProgress('widget')).stop();
+      // = останавливаем работу таймера
+      clearInterval(self.timerId);
     },
     // == если таймер дошёл до конца
     timerEnd: function(event, animationProgress, stepValue) {
       if (animationProgress == 1) {
         gameFuncs.city.endGame(true);
-      } else {
-        $(this)
-          .find('strong')
-          .text(stepValue.toFixed(2).substr(2));
       }
     }
   };
